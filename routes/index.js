@@ -345,5 +345,72 @@ router.get('/recent', (req, res)=>{
   
 })
 
+// search
+router.get('/search/:type/:keyword', (req, res)=>{
+  const type = req.params.type?? '';
+  const keyword = req.params.keyword?? '';
+  // 根据关键词和type 访问数据库拿到响应的数据
+  // keyword: music album user
+  new Promise((resolve, reject)=>{
+    client.connect((err)=>{
+      if(err){
+        console.log(err);
+       reject(err)
+      }
+      const db = client.db(dbName)
+      
+      let result = undefined
+      // 根据不同类型查找不同的数据库
+      switch (type) {
+        case 'music':
+          // 访问music数据库
+          // 根据keyword找到指定的歌单信息
+          result = db.collection(type).find({
+            $or:[
+              {name: new RegExp(keyword)}, 
+              {singer: new RegExp(keyword)}
+            ]
+          }).toArray()
+          resolve(result)
+          break;
+        case 'album':
+          // 访问music数据库
+          // 根据keyword找到指定的歌单信息
+          result = db.collection(type).find({
+            $or:[
+              {title: new RegExp(keyword)}, 
+              {content: new RegExp(keyword)}
+            ]
+          }).toArray()
+          resolve(result)
+
+          break;
+        case 'user':
+          // 访问user数据库
+          // 根据keyword找到指定的歌单信息
+          result = db.collection(type).find({
+              username: new RegExp(keyword)
+          }).toArray()
+          resolve(result)
+          break;
+        default:
+          break;
+      }
+    })
+  })
+  .then(data=>{
+    console.log(data)
+    let code = 200
+    if(!data.length){
+      code = 201
+    }
+    res.send({
+      code: code,
+      data: data
+    })
+    
+  })
+})
+
 
 module.exports = router;
