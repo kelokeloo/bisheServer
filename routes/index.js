@@ -2,7 +2,48 @@
 var express = require('express');
 var router = express.Router();
 
+
+const path=require('path')
+
 const jwt = require('jsonwebtoken')
+
+const multer = require('multer');
+
+let upload = multer({
+    storage: multer.diskStorage({
+        destination: function (req, file, cb) {
+            cb(null, path.resolve(__dirname, '../public/images/moment/'));
+        },
+        filename: function (req, file, cb) {
+            console.log('file.originalname', file.originalname)
+            var extname=file.originalname;
+            file.id=(new Date().getTime())
+            var changedName =file.id + '_' +  extname+'';
+            cb(null, changedName);
+        }
+    })
+});
+//上传图片
+router.post('/upload', upload.array('photos'), (req, res) => {
+    let fileList = req.files;
+    let body = req.body
+    const filesName = fileList.map(file=>{
+      return path.basename(file.path)
+    })
+    res.json({
+        code: 200,
+        data: filesName,
+        body: body
+    });
+});
+
+
+
+
+
+
+
+
 
 // mongodb client instance
 const { client, dbName } = require('../db/common')
@@ -506,7 +547,6 @@ router.get('/focuslist', async (req, res)=>{
 
 
 
-// 文件上传
 
 
 
