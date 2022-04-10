@@ -26,14 +26,14 @@ let upload = multer({
 //上传图片
 router.post('/upload', upload.array('photos'), (req, res) => {
     let fileList = req.files;
-    let body = req.body
+    let content = req.body
     const filesName = fileList.map(file=>{
       return path.basename(file.path)
     })
     res.json({
         code: 200,
         data: filesName,
-        body: body
+        body: content
     });
 });
 
