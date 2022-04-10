@@ -296,12 +296,16 @@ router.post('/login', async (req, res)=>{
 
   // 生成token
   const accessToken = createToken(username)
+
+  console.log('userInfo', data[0])
   
   res.send({
     code: 200,
     data: {
       token: accessToken,
-      userID: data[0]._id
+      userID: data[0]._id,
+      username:  data[0].username,
+      headIcon: data[0].headIcon
     }
   })
 })
@@ -411,6 +415,102 @@ router.get('/search/:type/:keyword', (req, res)=>{
     
   })
 })
+
+router.post('/focus', async (req, res)=>{
+  const {id, state} = req.body
+  const userID = req.headers.userid?? '';
+  const data = await new Promise((Resolve, Reject)=>{
+    client.connect((err)=>{
+      if(err){
+        console.log(err);
+       reject(err)
+      }
+      console.log('数据库连接成功')
+      const db = client.db(dbName)
+      // 找到关注列表
+      new Promise((resolve, reject)=>{
+        db.collection('user').findOne({_id: ObjectId(userID)}, (err, result)=>{
+          if(err) {
+            reject(err)
+            return
+          }
+          resolve(result.userFocusList)
+        })
+      })
+      .then(userFocusList=>{
+        // 判断是否已经在关注列表中
+        const index = userFocusList.findIndex(item=>item===id)
+        // 根据state进行处理
+        if(state){ // 执行关注操作
+          if(index !== -1) return Promise.reject({msg: '已经关注'})
+          userFocusList.push(id)
+          
+        }
+        else {
+          if(index === -1) return Promise.reject({msg: '不在关注列表中'})
+          // 从关注列表中移除
+          userFocusList.splice(index, 1)
+          
+        }
+        // 写入数据库
+        db.collection('user').updateOne({_id: ObjectId(userID)}, {$set: {userFocusList: userFocusList}}, (err, result)=>{
+          if(err) {
+            console.log('修改失败')
+            return
+          }
+          console.log('修改成功', result)
+          Resolve({msg: '修改成功'})
+          return Promise.resolve({msg: '修改成功'})
+        })
+      })
+      .catch(e=>{
+        Resolve({
+          code: -1,
+          msg: e
+        })
+      })
+    })
+  })
+  
+
+
+  res.send({
+    code: 200, 
+    msg: state ? '关注成功': '取消关注',
+    data: {id, state, userID, data}
+  })
+})
+
+// 用户关注列表
+router.get('/focuslist', async (req, res)=>{
+  const userID = req.headers.userid?? '';
+  const data = await new Promise((resolve, reject)=>{
+    client.connect((err)=>{
+      if(err){
+        console.log(err);
+       reject(err)
+      }
+      console.log('数据库连接成功')
+      const db = client.db(dbName)
+      // mongodb语句
+      db.collection('user').findOne({_id: ObjectId(userID)}, (err, result)=>{
+        resolve(result.userFocusList)
+      })
+    })
+  })
+  res.send({
+    code: 200,
+    data
+  })
+})
+
+
+
+// 文件上传
+
+
+
+
 
 
 module.exports = router;
