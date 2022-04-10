@@ -32,10 +32,11 @@ router.post('/upload', upload.array('photos'), (req, res) => {
     })
     res.json({
         code: 200,
-        data: filesName,
-        body: content
+        imgList: filesName
     });
 });
+
+
 
 
 
@@ -545,6 +546,16 @@ router.get('/focuslist', async (req, res)=>{
   })
 })
 
+// 发布moment
+router.post('/moment/publish', (req, res)=>{
+  const userID = req.headers.userid?? '';
+  let data = req.body;
+  res.send({
+    code: 200,
+    moment: data,
+    userID
+  })
+})
 
 
 
