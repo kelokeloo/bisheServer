@@ -534,7 +534,7 @@ router.get('/focuslist', async (req, res)=>{
       }
       console.log('数据库连接成功')
       const db = client.db(dbName)
-      // mongodb语句
+      // 查询用户信息
       db.collection('user').findOne({_id: ObjectId(userID)}, (err, result)=>{
         resolve(result.userFocusList)
       })
@@ -549,11 +549,69 @@ router.get('/focuslist', async (req, res)=>{
 // 发布moment
 router.post('/moment/publish', (req, res)=>{
   const userID = req.headers.userid?? '';
-  let data = req.body;
-  res.send({
-    code: 200,
-    moment: data,
-    userID
+  const data = req.body
+  let {content, imgList, time} = data;
+
+  // moment
+  const moment = {
+    content,
+    imgList,
+    time,
+    like: 0,
+    comment: []
+  }
+
+  // 将数据写入数据库
+  new Promise((resolve, reject)=>{
+    console.log('??')
+    client.connect((err)=>{
+      if(err){
+        console.log(err);
+       reject(err)
+      }
+      const db = client.db(dbName)
+      // 根据用户ID查询用户的动态列表
+      db.collection('user').findOne({_id: ObjectId(userID)}, (err, result)=>{
+        resolve(result.memoryList)
+        client.close()
+      })
+    })
+  })
+  .then(memoryList=>{
+    memoryList.push(moment)
+    console.log('memoryList', memoryList)
+    // 将修改写入数据库
+    client.connect((err)=>{
+      if(err){
+        console.log(err);
+       reject(err)
+      }
+      const db = client.db(dbName)
+      // 根据用户ID查询用户的动态列表
+      db.collection('user').updateOne({_id: ObjectId(userID)}, {$set:{memoryList}}, (err, result)=>{
+        client.close()
+        if(err) {
+          return Promise.reject(err)
+        }
+        return Promise.resolve(result)
+      })
+    })
+  })
+  .then(result=>{
+    console.log('result', result)
+    res.send({
+      code: 200,
+      mse: '发布成功',
+      moment: data,
+      userID
+    })
+  })
+  .catch(e=>{
+    res.send({
+      code: 201,
+      msg: '发布失败',
+      err: String(e)
+    })
   })
 })
 
