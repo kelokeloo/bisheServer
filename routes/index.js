@@ -672,7 +672,7 @@ function getUserFocusList(userID){
   })
 }
 
-
+// 获取动态信息
 router.get('/moments', async (req, res)=>{
   const userID = req.headers.userid?? '';
   const userFocusList = await getUserFocusList(userID)
@@ -717,6 +717,70 @@ router.get('/moments', async (req, res)=>{
   })
 })
 
+
+// 提交动态的评论
+router.post('/moment/comment', (req, res)=>{
+  const { userID, time, info} = req.body
+  new Promise((resolve, reject)=>{
+    client.connect((err)=>{
+      if(err){
+        console.log(err);
+       reject(err)
+      }
+      const db = client.db(dbName)
+      // mongodb语句
+      const data = db.collection('user').findOne({_id: ObjectId(userID)}, (err, result)=>{
+        client.close()
+        if(err) {
+          reject(err)
+          return 
+        }
+        resolve(result.memoryList)
+      })
+    })
+  })
+  .then(memoryList=>{
+    const index = memoryList.findIndex(item=>item.time===time)
+    if(index === -1) return
+    const memory = memoryList[index]
+    memory.comment.push(info)
+    // 修改数据库
+    return new Promise((resolve, reject)=>{
+      client.connect((err)=>{
+        if(err){
+          console.log(err);
+          reject(err)
+        }
+        const db = client.db(dbName)
+        // mongodb语句
+        const data = db.collection('user').updateOne({_id: ObjectId(userID)}, {
+          $set: {
+            memoryList
+          }
+        }, (err, result)=>{
+          if(err){
+            reject(err)
+            return
+          }
+          reject(result)
+        })
+      })
+    })
+  })
+  .then((result)=>{
+    res.send({
+      code: 200,
+      msg: result
+    })
+  })
+  .catch(err=>{
+    console.log(err)
+    res.send({
+      code: -1,
+      msg: '添加失败'
+    })
+  })
+})
 
 
 
