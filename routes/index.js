@@ -9,6 +9,8 @@ const jwt = require('jsonwebtoken')
 
 const multer = require('multer');
 
+const moment = require('moment')
+
 let upload = multer({
     storage: multer.diskStorage({
         destination: function (req, file, cb) {
@@ -615,6 +617,105 @@ router.post('/moment/publish', (req, res)=>{
   })
 })
 
+// 获取moments
+// 辅助函数 --- 获取指定用户的动态信息
+function getUserMoment(userID){
+  return new Promise((resolve, reject)=>{
+    client.connect((err)=>{
+      if(err){
+        console.log(err);
+       reject(err)
+      }
+      const db = client.db(dbName)
+      // 查询用户信息
+      const data = db.collection('user').findOne({_id: ObjectId(userID)}, (err, userInfo)=>{
+        if(err){
+          reject(err)
+          return
+        }
+        resolve({
+          username: userInfo.username,
+          headIcon: userInfo.headIcon,
+          memoryList: userInfo.memoryList,
+          userID
+        })
+      })
+    })
+  })
+  .catch(e=>{
+    console.error(e)
+    return e
+  })
+}
+// 辅助函数 --- 获取用户的关注列表
+function getUserFocusList(userID){
+  return new Promise((resolve, reject)=>{
+    client.connect((err)=>{
+      if(err){
+        console.log(err);
+       reject(err)
+      }
+      const db = client.db(dbName)
+      // 查询用户信息
+      const data = db.collection('user').findOne({_id: ObjectId(userID)}, (err, userInfo)=>{
+        if(err){
+          reject(err)
+          return
+        }
+        resolve(userInfo.userFocusList)
+      })
+    })
+  })
+  .catch(e=>{
+    console.error(e)
+    return e
+  })
+}
+
+
+router.get('/moments', async (req, res)=>{
+  const userID = req.headers.userid?? '';
+  const userFocusList = await getUserFocusList(userID)
+  const users = [userID, ...userFocusList]
+  const promises = users.map(id=>{
+    return getUserMoment(id)
+  })
+  Promise.all(promises)
+  .then(moments=>{
+    // 扁平化处理
+    console.log(moments)
+    let allMoments = []
+    moments.forEach(userMomentInfo=>{
+      let { username, headIcon, memoryList, userID } = userMomentInfo
+      memoryList = memoryList.map(item=>{
+        item.username = username
+        item.headIcon = headIcon
+        item.userID = userID
+        return item
+      })
+      allMoments = [...allMoments, ...memoryList]
+    })
+    // 按照发布时间递减排序
+    allMoments.sort((a, b)=>{
+      const aTimeStamp = moment(a.time).valueOf()
+      const bTimeStamp = moment(b.time).valueOf()
+      return bTimeStamp - aTimeStamp
+    })
+
+    res.send({
+      code: 200,
+      userID,
+      moments:allMoments
+    })
+  })
+  .catch(e=>{
+    res.send({
+      code: -1,
+      userID,
+      msg: '获取失败'
+    })
+  })
+})
 
 
 
