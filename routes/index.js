@@ -782,6 +782,75 @@ router.post('/moment/comment', (req, res)=>{
   })
 })
 
+// 喜欢数据
+
+router.post('/moment/like', (req, res)=>{
+  const likeInfo = req.body
+  const { userID, time, list} = likeInfo
+
+  new Promise((resolve, reject)=>{
+    client.connect((err)=>{
+      if(err){
+        console.log(err);
+       reject(err)
+      }
+      const db = client.db(dbName)
+      // 找到动态对应的用户
+      const data = db.collection('user').findOne({_id: ObjectId(userID)}, (err, result)=>{
+        client.close()
+        if(err) {
+          reject(err)
+          return 
+        }
+        resolve(result.memoryList)
+      })
+    })
+  })
+  .then(memoryList=>{
+    const index = memoryList.findIndex(item=>item.time===time)
+    if(index === -1) return
+    const memory = memoryList[index]
+    // 修改的数据
+    memory.like = list
+
+    console.log('memoryList', memoryList)
+
+    // 修改数据库
+    return new Promise((resolve, reject)=>{
+      client.connect((err)=>{
+        if(err){
+          console.log('连接失败', err);
+          reject(err)
+        }
+        const db = client.db(dbName)
+        // mongodb语句
+        db.collection('user').updateOne({_id: ObjectId(userID)}, {$set: {memoryList}}, (err, result)=>{
+          client.close()
+          if(err){
+            console.log('修改数据失败');
+            reject(err)
+            return
+          }
+          resolve(result)
+        })
+      })
+    })
+  })
+  .then((result)=>{
+    res.send({
+      code: 200,
+      msg: '操作成功'
+    })
+  })
+  .catch(err=>{
+    console.log(err)
+    res.send({
+      code: -1,
+      msg: '喜欢操作失败'
+    })
+  })
+
+})
 
 
 
