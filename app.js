@@ -1,8 +1,10 @@
 var createError = require('http-errors');
 var express = require('express');
 
-
 var bodyParser = require('body-parser');//用于req.body获取值的
+
+// webSocket 模块
+require('./webSocket/index')
 
 const fs=require('fs')
 

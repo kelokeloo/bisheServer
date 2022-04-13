@@ -853,6 +853,145 @@ router.post('/moment/like', (req, res)=>{
 })
 
 
+// 获取对话框列表
+router.get('/chatlist', (req, res)=>{
+  const userID = req.headers.userid?? '';
+  // 根据这个userID拿到用户的对话列表
+  new Promise((resolve, reject)=>{
+    client.connect((err)=>{
+      if(err){
+        console.log(err);
+       reject(err)
+      }
+      const db = client.db(dbName)
+      // 查询用户拥有的对话框
+      const data = db.collection('dialog').find({
+        include: {$elemMatch:{$eq:userID}}
+      }).toArray()
+      resolve(data)
+    })
+  })
+  .then(chatList=>{
+    res.send({
+      code: 200,
+      chatList: chatList
+    })
+  })
+  .catch(e=>{
+    console.log(e)
+    res.send({
+      code: -1,
+      msg: '获取失败'
+    })
+  })
+})
+
+// 获取用户信息
+router.get('/userInfo/:userId', (req, res)=>{
+  const { userId } = req.params
+  new Promise((resolve, reject)=>{
+    client.connect((err)=>{
+      if(err){
+        console.log(err);
+       reject(err)
+      }
+      console.log('数据库连接成功')
+      const db = client.db(dbName)
+      // mongodb语句
+      const data = db.collection('user').findOne({_id: ObjectId(userId)}, (err, result)=>{
+        if(err){
+          reject(err)
+          return
+        }
+        resolve(result)
+      })
+    })
+  })
+  .then(userInfo=>{
+    res.send({
+      code: 200,
+      userInfo
+    })
+  })
+  .catch(e=>{
+    console.error(e)
+    res.send({
+      code: -2,
+      msg: '查询失败'
+    })
+  })
+})
+
+// 获取指定对话框的聊天数据, 包含用户头像和用户名
+
+router.get('/msglist/:dialogId', (req, res)=>{
+  const { dialogId } = req.params
+  console.log(dialogId)
+  new Promise((resolve, reject)=>{
+    client.connect((err)=>{
+      if(err){
+        console.log(err);
+       reject(err)
+      }
+      console.log('数据库连接成功')
+      const db = client.db(dbName)
+      // 获取对话框列表数据
+      db.collection('dialog').findOne({_id: ObjectId(dialogId)}, (err, dialogInfo)=>{
+        if(err){
+          reject(err)
+          return
+        }
+        resolve({
+          include: dialogInfo.include,
+          messages: dialogInfo.messages
+        })
+      })
+    })
+  })
+  .then(({include, messages})=>{
+    // 获取用户的头像和姓名
+    const usersInfoPromises = include.map(uid=>{
+      return new Promise((resolve, reject)=>{
+        client.connect((err)=>{
+          if(err){
+            console.log(err);
+           reject(err)
+          }
+          const db = client.db(dbName)
+          // mongodb语句
+          db.collection('user').findOne({_id: ObjectId(uid)}, (err, userInfo)=>{
+            if(err){
+              reject(err)
+              return
+            }
+            resolve({
+              userId: uid,
+              headIcon: userInfo.headIcon,
+              username: userInfo.username
+            })
+          })
+        })
+      })
+    })
+    return Promise.all(usersInfoPromises)
+    .then(usersInfo=>{
+      res.send({
+        code: 200,
+        data: {
+          usersInfo, 
+          messages
+        }
+      })
+    })
+  })
+  .catch(e=>{
+    console.error(e)
+    res.send({
+      code: -1,
+      msg: '获取对话框数据失败'
+    })
+  })
+})
 
 
 
