@@ -147,10 +147,8 @@ router.get('/handpick', async function(req, res, next){
 // music 
 router.get('/music/:id', async (req, res)=>{
   const musicId = req.params.id
-  console.log('musicId', musicId)
   // 拿到用户id
   const userID = req.headers.userid?? '';
-  console.log(userID)
   const data = await new Promise((resolve, reject)=>{
     client.connect((err)=>{
       if(err){
@@ -341,7 +339,6 @@ router.post('/login', async (req, res)=>{
   // 生成token
   const accessToken = createToken(username)
 
-  console.log('userInfo', data[0])
   
   res.send({
     code: 200,
@@ -358,10 +355,6 @@ router.post('/login', async (req, res)=>{
 
 router.get('/recent', (req, res)=>{
   if(!verifyTokenFromRequest(req, res)) {
-    res.send({
-      code: 401,
-      msg: '非法token'
-    })
     return 
   }
   const userID = req.headers.userid?? '';
