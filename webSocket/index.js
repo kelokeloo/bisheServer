@@ -50,7 +50,7 @@ wsServer.on('connection', function connection(connect) {
           break;
 
         case 'message':
-          const { dialogId, belong, text, musicId, time } = info.message
+          const { dialogId, belong, text, musicId, time, username, headIcon } = info.message
           try {
              const dialogInfo = await getDialogInfo(dialogId)
              let relateUsers = dialogInfo.include
@@ -79,6 +79,8 @@ wsServer.on('connection', function connection(connect) {
                 if(index >= 0){ // 如果用户在线，直接发送过去
                   let connect = connects[index].connect
                   msgFrame.dialogId = dialogId
+                  msgFrame.username = username
+                  msgFrame.headIcon = headIcon
                   console.log('发送消息', msgFrame)
                   connect.send(JSON.stringify({
                     type: 'dialog',
