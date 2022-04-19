@@ -60,7 +60,8 @@ router.post('/upload', upload.array('photos'), (req, res) => {
 
 
 // mongodb client instance
-const { client, dbName } = require('../db/common')
+const { client, dbName } = require('../db/common');
+const { resolve } = require('path');
 const  ObjectId = require('mongodb').ObjectId
 
 const ACCESS_TOKEN_SECRET='swsh23hjddnns'
@@ -1117,6 +1118,30 @@ router.post('/setPassword', (req, res)=>{
         msg: '密码不匹配'
       })
     }
+  })
+})
+
+// 修改头像
+router.post('/setHeadIcon', (req, res)=>{
+  const { headIcon } = req.body
+  const userID = req.headers.userid?? '';
+  getUserInfo(userID)
+  .then(userInfo=>{
+    userInfo.headIcon = headIcon
+    return updateUserInfo(userID, userInfo)
+  })
+  .then(result=>{
+    res.send({
+      code: 200,
+      msg: '修改成功'
+    })
+  })
+  .catch(e=>{
+    res.send({
+      code: 200,
+      msg: '修改失败',
+      error: e
+    })
   })
 })
 
