@@ -13,7 +13,8 @@ const {
   getMusicById,
   getAllUserInfo,
   addOneUser,
-  addOneAlbum
+  addOneAlbum,
+  setUserLikeMusic
 } = require('../db/common/index')
 
 
@@ -226,6 +227,27 @@ router.get('/musicMark/:id', (req, res)=>{
     msg: 'success'
   })
 })
+router.post('/musicLike', (req, res)=>{
+  // 拿到用户id
+  const userID = req.headers.userid?? '';
+  const { musicId , state} = req.body
+
+  setUserLikeMusic(userID, musicId, state)
+  .then(data=>{
+    res.send({
+      code: 200,
+      msg: '更新失败',
+      data
+    })
+  })
+  .catch(err=>{
+    res.send({
+      code: -1,
+      msg: '更新失败',
+      err
+    })
+  })
+})
 
 
 // album 
@@ -298,10 +320,12 @@ router.get('/albumMark/:id', (req, res)=>{
 
 // range
 router.get('/range', async (req, res)=>{
+  // 拿到用户id
+  const userID = req.headers.userid?? '';
   const mockList = ['624d8c01f3bad8bc9895a334', '624d97a8f3bad8bc9895a70d', '62590e96f3bad8bc98984e95', '624d981cf3bad8bc9895a739', '62594a71f3bad8bc98987326']
   try {
     const promises = mockList.map(item=>{
-      return getMusicById(item)
+      return getMusicById(item, userID)
     })
     const result = await Promise.all(promises)
     res.send({
@@ -379,7 +403,6 @@ router.post('/login', async (req, res)=>{
 router.post('/register', async (req, res)=>{
   const {username, password} = req.body;
   // 如果两者有一个为null则返回错误
-
   const users = await getAllUserInfo()
   // 判断用户名是否已经存在
   if(users.findIndex(item=>item.username === username) !== -1){
@@ -397,6 +420,7 @@ router.post('/register', async (req, res)=>{
     username : username,
     password : password,
     headIcon : "/images/headIcon/defaultHeadIcon.png",
+    likeMusics: [],
     recent : {
         recentMusicAlbum : albumId,
         albumList : []

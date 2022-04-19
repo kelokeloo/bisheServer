@@ -80,6 +80,31 @@ function getUserInfo(userId){
     })
   })
 }
+
+/**
+ * 更新用户信息
+ */
+function updateUserInfo(userId, document){
+  // console.log(userId, document)
+  return new Promise((resolve, reject)=>{
+    client.connect(async(err)=>{
+      if(err){reject(err)}
+      // 获取原来的数据
+      const db = client.db(dbName)
+        // 更新
+      db.collection('user').updateOne({_id: ObjectId(userId)}, {$set: document }, (err, result)=>{
+        if(err){
+          console.log(err)
+          reject(err)
+        }
+        resolve(result)
+      })
+    })
+  })
+}
+
+
+
 /**
  * 获取所有用户信息
  */
@@ -159,7 +184,7 @@ function addOneAlbum(title, content){{
 /**
  * 获取音乐
  */
-function getMusicById(musicId){
+function getMusicById(musicId, userId){
   return new Promise((resolve, reject)=>{
     client.connect(async(err)=>{
       if(err){reject(err)}
@@ -178,7 +203,78 @@ function getMusicById(musicId){
       }
     })
   })
+  .then(musicInfo=>{
+    // 找到音乐之后判断是否是用户喜欢的音乐
+    return new Promise((resolve, reject)=>{
+      client.connect(async(err)=>{
+        if(err){reject(err)}
+        try {
+          const db = client.db(dbName)
+          // 更新
+          db.collection('user').findOne({_id: ObjectId(userId)}, (err, result)=>{
+            if(err){reject(err)} // 查找错误
+            else {
+              const likeMusics = result.likeMusics
+
+              const index = likeMusics.findIndex(item=>item === musicInfo._id.toString())
+              if(index !== -1){ // 喜欢标记
+                musicInfo.like = true
+              }
+              else {
+                musicInfo.like = false
+              }
+              resolve(musicInfo)
+            }
+          })
+        }
+        catch(e){
+          reject(e)
+        }
+      })
+    })
+    
+  })
 }
+
+/**
+ * 设置用户喜欢的音乐
+ */
+function setUserLikeMusic(userId, musicId, state){
+  return new Promise(async (resolve, reject)=>{
+    const userInfo = await getUserInfo(userId)
+    const likeMusics = userInfo.likeMusics
+    
+    // 判断是否在喜欢列表中
+    const index = likeMusics.findIndex(item=>item === musicId)
+    switch (state) {
+      case true: 
+        if(index === -1){
+          likeMusics.push(musicId)
+        }
+        break;
+      case false:
+        if(index !== -1){
+          likeMusics.splice(index, 1)
+        }
+        break;
+    }
+    
+    
+    // // 更新到数据库中
+    userInfo.likeMusics = likeMusics
+    return updateUserInfo(userId, userInfo)
+  })
+  .then((result)=>{
+    console.log('result',result)
+    return {
+      msg: '更新成功',
+      result
+    }
+  })
+    
+  
+}
+
 
 
 
@@ -192,7 +288,8 @@ module.exports = {
   getMusicById,
   getAllUserInfo,
   addOneUser,
-  addOneAlbum
+  addOneAlbum,
+  setUserLikeMusic
 }
 
 
