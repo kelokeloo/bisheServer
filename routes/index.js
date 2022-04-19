@@ -6,10 +6,19 @@ var router = express.Router();
 const path=require('path')
 
 const jwt = require('jsonwebtoken')
+const moment = require('moment')
+
+const {
+  getUserInfo,
+  getMusicById,
+  getAllUserInfo,
+  addOneUser,
+  addOneAlbum
+} = require('../db/common/index')
+
 
 const multer = require('multer');
 
-const moment = require('moment')
 
 let upload = multer({
     storage: multer.diskStorage({
@@ -289,10 +298,23 @@ router.get('/albumMark/:id', (req, res)=>{
 
 // range
 router.get('/range', async (req, res)=>{
-  res.send({
-    code: 200,
-    musicList: ['1', '2', '3', '4', '5']
-  })
+  const mockList = ['624d8c01f3bad8bc9895a334', '624d97a8f3bad8bc9895a70d', '62590e96f3bad8bc98984e95', '624d981cf3bad8bc9895a739', '62594a71f3bad8bc98987326']
+  try {
+    const promises = mockList.map(item=>{
+      return getMusicById(item)
+    })
+    const result = await Promise.all(promises)
+    res.send({
+      code: 200,
+      data: result
+    })
+  }
+  catch(e){
+    res.send({
+      code: -1,
+      error: e
+    })
+  }
 })
 
 
@@ -350,6 +372,48 @@ router.post('/login', async (req, res)=>{
     }
   })
 })
+
+/**
+ * register
+ */
+router.post('/register', async (req, res)=>{
+  const {username, password} = req.body;
+  // 如果两者有一个为null则返回错误
+
+  const users = await getAllUserInfo()
+  // 判断用户名是否已经存在
+  if(users.findIndex(item=>item.username === username) !== -1){
+    res.send({
+      code: -1,
+      msg: '用户名已经存在'
+    })
+    return
+  }
+  // 构建用户最近收听的音乐
+  const albumId =  await addOneAlbum(`${username}最近收听的音乐`)
+  console.log(albumId)
+  // 构建文档 
+  const document = {
+    username : username,
+    password : password,
+    headIcon : "/images/headIcon/defaultHeadIcon.png",
+    recent : {
+        recentMusicAlbum : albumId,
+        albumList : []
+    },
+    userFocusList : [],
+    memoryList : []
+  }
+  const userId = await addOneUser(document)
+
+  res.send({
+    code: 200, 
+    username, 
+    userId
+  })
+})
+
+
 
 // recent 
 
@@ -552,7 +616,7 @@ router.post('/moment/publish', (req, res)=>{
     content,
     imgList,
     time,
-    like: 0,
+    like: [],
     comment: []
   }
 
@@ -986,6 +1050,25 @@ router.get('/msglist/:dialogId', (req, res)=>{
   })
 })
 
+
+// 获取用户信息
+router.get('/userInfo', async (req, res)=>{
+  const userID = req.headers.userid?? '';
+  try{
+    const userInfo = await getUserInfo()
+    res.send({
+      code: 200,
+      data: userInfo
+    })
+  }
+  catch(e){
+    res.send({
+      code: -1,
+      msg: '获取失败'
+    })
+  }
+  
+})
 
 
 module.exports = router;
