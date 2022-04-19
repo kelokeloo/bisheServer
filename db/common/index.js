@@ -289,7 +289,8 @@ module.exports = {
   getAllUserInfo,
   addOneUser,
   addOneAlbum,
-  setUserLikeMusic
+  setUserLikeMusic,
+  updateUserInfo
 }
 
 

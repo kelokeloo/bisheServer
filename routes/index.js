@@ -14,7 +14,8 @@ const {
   getAllUserInfo,
   addOneUser,
   addOneAlbum,
-  setUserLikeMusic
+  setUserLikeMusic,
+  updateUserInfo
 } = require('../db/common/index')
 
 
@@ -1092,6 +1093,31 @@ router.get('/userInfo', async (req, res)=>{
     })
   }
   
+})
+
+// 修改密码
+router.post('/setPassword', (req, res)=>{
+  const {password, newPassword} = req.body
+  const userID = req.headers.userid?? '';
+  getUserInfo(userID)
+  .then(userInfo=>{
+    if(userInfo.password === password){
+      userInfo.password = newPassword
+      updateUserInfo(userID, userInfo)
+      .then(result=>{
+        res.send({
+          code: 200,
+          msg: '更新成功'
+        })
+      })
+    }
+    else {
+      res.send({
+        code: -1,
+        msg: '密码不匹配'
+      })
+    }
+  })
 })
 
 
