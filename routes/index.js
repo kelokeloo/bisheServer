@@ -15,7 +15,10 @@ const {
   addOneUser,
   addOneAlbum,
   setUserLikeMusic,
-  updateUserInfo
+  updateUserInfo,
+  getUserDialogsInfo,
+  dispatchDialogByUserId,
+  getDialogInfo
 } = require('../db/common/index')
 
 
@@ -937,8 +940,10 @@ router.post('/moment/like', (req, res)=>{
 
 
 // 获取对话框列表
-router.get('/chatlist', (req, res)=>{
+router.get('/chatlist', async(req, res)=>{
   const userID = req.headers.userid?? '';
+
+
   // 根据这个userID拿到用户的对话列表
   new Promise((resolve, reject)=>{
     client.connect((err)=>{
@@ -968,6 +973,39 @@ router.get('/chatlist', (req, res)=>{
     })
   })
 })
+
+/**
+ * 获取所有未读信息
+ */
+router.get('/AllDialogUnreadMsg', async (req, res)=>{
+  const userID = req.headers.userid?? '';
+  const list = await getUserDialogsInfo(userID)
+  const promises = list.map(async item=>{
+    const { unReadlist } = await dispatchDialogByUserId(item, userID)
+    return {
+      dialogId: item._id,
+      unReadlist
+    }
+  })
+  const dialogsInfo = await Promise.all(promises)
+  res.send(dialogsInfo)
+})
+
+/**
+ * 获取制定对话框已读信息
+ */
+router.get('/dialogReadMsg', async (req, res)=>{
+  const userID = req.headers.userid?? '';
+  const { dialogId } = req.query
+  const dialogInfo = await getDialogInfo(dialogId)
+  const { readList } = await dispatchDialogByUserId(dialogInfo, userID)
+  res.send(readList)
+})
+
+
+
+
+
 
 // 获取用户信息
 router.get('/userInfo/:userId', (req, res)=>{

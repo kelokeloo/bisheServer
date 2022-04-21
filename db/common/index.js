@@ -277,6 +277,61 @@ function setUserLikeMusic(userId, musicId, state){
 
 
 
+/**
+ * 获取与用户有关的对话框
+ */
+function getUserDialogsInfo(userId){
+  return new Promise((resolve, reject)=>{
+    client.connect((err)=>{
+      if(err){
+        console.log(err);
+       reject(err)
+      }
+      const db = client.db(dbName)
+      // 查询用户拥有的对话框
+      const data = db.collection('dialog').find({
+        include: {$elemMatch:{$eq:userId}}
+      }).toArray()
+      resolve(data)
+    })
+  })
+}
+
+/**
+ * 分离已读和未读
+ */
+async function dispatchDialogByUserId(dialogInfo, userId){
+  // console.log('dialogInfo', dialogInfo)
+  const readList = []
+  const unReadlist = []
+  const { messages, include } = dialogInfo
+  // 获取用户信息
+  const promises = include.map(userId=>{
+    return getUserInfo(userId)
+  })
+  const usersInfo = await Promise.all(promises)
+
+  messages.forEach(msg=>{
+    const { readList: readListRaw } = msg
+    // 找到头像、姓名
+    const userInfoIndex = usersInfo.findIndex(item=>item._id.toString()===msg.belong)
+    // 添加头像、姓名
+    msg.headIcon = usersInfo[userInfoIndex].headIcon
+    msg.username = usersInfo[userInfoIndex].username
+
+    const index = readListRaw.findIndex(item=>item===userId)
+    if(index === -1){ // 未读
+      unReadlist.push(msg)
+    }
+    else { // 已读
+      readList.push(msg)
+    }
+  })
+  return {
+    readList,
+    unReadlist
+  }
+}
 
 
 module.exports = {
@@ -290,7 +345,9 @@ module.exports = {
   addOneUser,
   addOneAlbum,
   setUserLikeMusic,
-  updateUserInfo
+  updateUserInfo,
+  getUserDialogsInfo,
+  dispatchDialogByUserId
 }
 
 
