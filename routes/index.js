@@ -18,7 +18,8 @@ const {
   updateUserInfo,
   getUserDialogsInfo,
   dispatchDialogByUserId,
-  getDialogInfo
+  getDialogInfo,
+  setAllMsgInDialog
 } = require('../db/common/index')
 
 
@@ -1181,6 +1182,31 @@ router.post('/setHeadIcon', (req, res)=>{
       error: e
     })
   })
+})
+
+/**
+ * 设置用户已读信息
+ */
+
+router.post('/setUserReadMsg', async (req, res)=>{
+  const userID = req.headers.userid?? '';
+  const { dialogId } = req.body
+  const { messages } = await getDialogInfo(dialogId)
+  messages.forEach(msg=>{
+    const index = msg.readList.findIndex(id=>id===userID)
+    if(index === -1){
+      msg.readList.push(userID)
+    }
+  })
+  console.log('userID', userID)
+  // 写入数据库
+  await setAllMsgInDialog(dialogId, messages)
+  res.send({
+    msg: '写入数据库', 
+    messages
+  })
+
+
 })
 
 

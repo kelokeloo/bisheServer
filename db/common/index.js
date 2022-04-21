@@ -56,6 +56,39 @@ function addMessageToDialog(dialogId, message){
 }
 
 /**
+ * 直接修改dialog的全部信息
+ */
+function setAllMsgInDialog(dialogId, msgs){
+  return new Promise((resolve, reject)=>{
+    client.connect(async(err)=>{
+      if(err){reject(err)}
+      // 获取原来的数据
+      try {
+        const dialogInfo = await getDialogInfo(dialogId)
+        // 
+        const { messages } = dialogInfo
+        // messages.push(message)
+
+        const db = client.db(dbName)
+        // 更新
+        db.collection('dialog').updateOne({_id: ObjectId(dialogId)}, 
+        {
+          $set:{messages: msgs}
+        },
+        (err, result)=>{
+          resolve(result)
+        })
+      }
+      catch(e){
+        reject(e)
+      }
+    })
+  })
+}
+
+
+
+/**
  * 获取用户信息
  */
 
@@ -347,7 +380,8 @@ module.exports = {
   setUserLikeMusic,
   updateUserInfo,
   getUserDialogsInfo,
-  dispatchDialogByUserId
+  dispatchDialogByUserId,
+  setAllMsgInDialog
 }
 
 
