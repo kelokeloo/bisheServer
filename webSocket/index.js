@@ -6,15 +6,20 @@ const {
 
 const wsServer = new WebSocket.Server({ port: 8080 });
 
-// item
-// {userId, connect}
-let connects = []
+
+// 存储连接的地方
+// {
+//   userId:'xxx',
+//   connect: 'xxx'
+// }
+let connects = [] 
+
 
 function connectsClear(connects){
   // 遍历connects的状态,将断开连接的从中去除
   const list = []
   connects.forEach(item=>{
-    if(item.connect.readyState === 1)
+    if(item.connect.readyState === 1) // 正常的连接
       list.push(item)
   })
   return list
@@ -25,15 +30,15 @@ wsServer.on('connection', function connection(connect) {
     // 处理来自用户发送的消息
     connect.on('message', async (msg)=>{
       let info = JSON.parse(msg)
+      console.log('info', info)
       // 清理无效连接
       connects = connectsClear(connects)
       
-
       let index = -1
       switch (info.type) {
         case 'connect':
           // 在connects中查找
-          index = connects.findIndex(item=>item.userId === info.userId)
+          index = connects.findIndex(item=>item.userId === info.value)
           if(index !== -1){
             // 关闭之前的连接
             connects[index].connect.close()
@@ -41,16 +46,21 @@ wsServer.on('connection', function connection(connect) {
           }
           // 将新的连接添加进去
           connects.push({
-            userId:info.userId,
+            userId:info.value,
             connect
           })
-          console.log(`${info.userId} 的socket连接已经添加到connects中，当前连接用户为${
+          console.log(`${info.value} 的socket连接已经添加到connects中，当前连接用户为${
             connects.map(item=>item.userId).toString()
           }`)
+          connect.send(JSON.stringify({
+            type: 'connect',
+            value: '绑定成功'
+          }))
+
           break;
 
         case 'message':
-          const { dialogId, belong, text, musicId, time, username, headIcon } = info.message
+          const { dialogId, belong, text, musicId, time, username, headIcon } = info.value
           try {
              const dialogInfo = await getDialogInfo(dialogId)
              let relateUsers = dialogInfo.include
@@ -87,15 +97,8 @@ wsServer.on('connection', function connection(connect) {
                     message: msgFrame
                   }))
                 }
-              })
-
-
-              
-              
-            })
-
-
-            
+              }) 
+            })     
           }
           catch(e){
             console.log(e)
@@ -104,9 +107,6 @@ wsServer.on('connection', function connection(connect) {
           default:
           break;
       }
-
-      
-
     });
 });
 
