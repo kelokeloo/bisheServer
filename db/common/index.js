@@ -202,7 +202,7 @@ function addOneAlbum(title, content){{
         const db = client.db(dbName)
         // 插入
         const result = await db.collection('album').insertOne(document)
-        resolve(result.insertedId) // 返回插入的id
+        resolve(result.insertedId.toString()) // 返回插入的id
       }
       catch(e){
         reject(e)

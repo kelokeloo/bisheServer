@@ -8,11 +8,7 @@ const {
 const wsServer = new WebSocket.Server({ port: 8080 });
 
 
-// 存储连接的地方
-// {
-//   userId:'xxx',
-//   connect: 'xxx'
-// }
+
 let connects = [] 
 
 

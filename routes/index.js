@@ -205,7 +205,7 @@ router.get('/musicMark/:id', (req, res)=>{
     .then(albumID=>{
       // 根据albumID拿到最近收听的音乐数组
       return new Promise((resolve, reject)=>{
-        db.collection('album').findOne({id: albumID}, (err, result)=>{
+        db.collection('album').findOne({_id: ObjectId(albumID)}, (err, result)=>{
           if(err) return Promise.reject(err)
           resolve({albumID, musicList:result.musicList})
         })
@@ -220,7 +220,7 @@ router.get('/musicMark/:id', (req, res)=>{
       }
       musicList.unshift(musicId)
       // 将修改同步到数据库
-      db.collection('album').updateOne({id: albumID}, {$set:{musicList: musicList}},(err, result)=>{
+      db.collection('album').updateOne({_id: ObjectId(albumID) }, {$set:{musicList: musicList}},(err, result)=>{
         // console.log(result)
       })
     })
@@ -259,6 +259,7 @@ router.post('/musicLike', (req, res)=>{
 // album 
 router.get('/album/:id', async (req, res)=>{
   const albumId = req.params.id
+  console.log('albumId', albumId)
   // 拿到用户id
   const userID = req.headers.userid?? '';
   const data = await new Promise((resolve, reject)=>{
@@ -269,14 +270,14 @@ router.get('/album/:id', async (req, res)=>{
       }
       const db = client.db(dbName)
       // 根据albumID找到指定的歌单信息
-      const result = db.collection('album').find({id:`${albumId}`}).toArray()
+      const result = db.collection('album').find({_id:ObjectId(albumId)}).toArray()
       
       resolve(result)
     })
   })
   res.send({
     code: 200,
-    data: data[0]
+    data: data[0] ? data[0] : []
   })
 })
 
