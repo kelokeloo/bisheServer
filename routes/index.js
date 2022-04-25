@@ -19,7 +19,9 @@ const {
   getUserDialogsInfo,
   dispatchDialogByUserId,
   getDialogInfo,
-  setAllMsgInDialog
+  setAllMsgInDialog,
+  getTwoUsersDialogsId,
+  addOneDialog
 } = require('../db/common/index')
 
 
@@ -1209,6 +1211,29 @@ router.post('/setUserReadMsg', async (req, res)=>{
 
 
 })
+
+/**
+ * 获取与目标用户的对话框id
+ */
+router.get('/dialogId', async (req, res)=>{
+  const userID = req.headers.userid?? '';
+  const targetId = req.query.targetId
+  // 查找是否有对话框
+  const result = await getTwoUsersDialogsId(userID, targetId)
+  let dialogId = -1
+  if(!result){ // 还没有创建对话，新增一个对话
+    dialogId = await addOneDialog(userID, targetId)
+  }
+  else {
+    dialogId = result._id
+  }
+
+  res.send({
+    dialogId
+  })
+})
+
+
 
 
 module.exports = router;

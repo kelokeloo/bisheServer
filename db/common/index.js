@@ -308,6 +308,36 @@ function setUserLikeMusic(userId, musicId, state){
   
 }
 
+/**
+ * 添加一个对话框
+ */
+ function addOneDialog(userId1, userId2){
+  return new Promise((resolve, reject)=>{
+    client.connect(async (err)=>{
+      if(err){reject(err)}
+      // 获取原来的数据
+      try {
+        const db = client.db(dbName)
+        // 插入的数据
+        const document = {
+          "include" : [ 
+              userId1, 
+              userId2
+          ],
+          "messages" : []
+        }
+        const result = await db.collection('dialog').insertOne(document)
+        resolve(result.insertedId.toString())
+      }
+      catch(e){
+        reject(e)
+      }
+    })
+  })
+}
+
+
+
 
 
 /**
@@ -329,6 +359,40 @@ function getUserDialogsInfo(userId){
     })
   })
 }
+
+/**
+ * 获取用户与指定用户的对话框
+ */
+function getTwoUsersDialogsId(userId1, userId2){
+  return new Promise((resolve, reject)=>{
+    client.connect((err)=>{
+      if(err){
+        console.log(err);
+       reject(err)
+      }
+      const db = client.db(dbName)
+      // 查询用户拥有的对话框
+      const data = db.collection('dialog').find({
+        include: { $all:[userId1, userId2] }
+      }).toArray()
+      resolve(data)
+    })
+  })
+  .then(dataArr=>{
+    return new Promise((resolve, reject)=>{
+      if(dataArr.length){
+        resolve(dataArr[0])
+      }
+      else {
+        resolve(null)
+      }
+      return
+    })
+    
+  })
+}
+
+
 
 /**
  * 分离已读和未读
@@ -377,11 +441,13 @@ module.exports = {
   getAllUserInfo,
   addOneUser,
   addOneAlbum,
+  addOneDialog,
   setUserLikeMusic,
   updateUserInfo,
   getUserDialogsInfo,
   dispatchDialogByUserId,
-  setAllMsgInDialog
+  setAllMsgInDialog,
+  getTwoUsersDialogsId
 }
 
 
