@@ -21,7 +21,9 @@ const {
   getDialogInfo,
   setAllMsgInDialog,
   getTwoUsersDialogsId,
-  addOneDialog
+  addOneDialog,
+  updateMusicInfo,
+  getAllMusics
 } = require('../db/common/index')
 
 
@@ -167,6 +169,9 @@ router.get('/music/:id', async (req, res)=>{
   const musicId = req.params.id
   // 拿到用户id
   const userID = req.headers.userid?? '';
+  const userInfo = await getUserInfo(userID)
+  const likeList = userInfo.likeMusics
+
   const data = await new Promise((resolve, reject)=>{
     client.connect((err)=>{
       if(err){
@@ -174,21 +179,59 @@ router.get('/music/:id', async (req, res)=>{
        reject(err)
       }
       const db = client.db(dbName)
+      let result = null
       // 根据音乐id查找指定音乐
-      const result = db.collection('music').find({id:`${musicId}`}).toArray()
+      if(musicId.length > 1){
+        result = db.collection('music').find(
+          { _id: ObjectId(musicId) } 
+        ).toArray()
+      }
+      else {
+        result = db.collection('music').find(
+          { id: musicId }
+        ).toArray()
+      }
+      
       resolve(result)
     })
   })
+
+  let musicInfo = null
+
+  if(data.length){
+    musicInfo = data[0]
+    console.log('likeList', likeList, musicInfo)
+
+
+
+    if(likeList.findIndex(item=>item===musicInfo._id.toString()) === -1){
+      musicInfo.like = false
+    }
+    else {
+      musicInfo.like = true
+    }
+  }
   res.send({
     code: 200,
-    data: data[0]
+    data: musicInfo
   })
 })
 // music mark
-router.get('/musicMark/:id', (req, res)=>{
-  const musicId = req.params.id
+router.get('/musicMark/:id', async (req, res)=>{
   // 拿到用户id
   const userID = req.headers.userid?? '';
+  const musicId = req.params.id
+  // 添加计数
+  const musicInfo = await getMusicById(musicId, userID)
+  console.log('musicInfo.count', musicInfo)
+  if(!musicInfo.count){
+    musicInfo.count = 1
+  }
+  else {
+    musicInfo.count = musicInfo.count + 1
+  }
+  updateMusicInfo(musicId, musicInfo)
+
   // 添加到用户最近收听的音乐歌单
   // 找到对应用户的歌单id
   client.connect((err)=>{
@@ -234,6 +277,10 @@ router.get('/musicMark/:id', (req, res)=>{
     code: 200,
     msg: 'success'
   })
+
+
+
+
 })
 router.post('/musicLike', (req, res)=>{
   // 拿到用户id
@@ -329,17 +376,30 @@ router.get('/albumMark/:id', (req, res)=>{
 
 // range
 router.get('/range', async (req, res)=>{
+  // 拿到所有音乐进行排序
+  const musics =  await getAllMusics()
+  musics.sort((a, b)=>{
+    return b.count - a.count
+  })
+  if(musics.length > 5){
+    musics.splice(5)
+  }
+  const musicIds = musics.map(item=>{
+    return item._id.toString()
+  })
+
   // 拿到用户id
   const userID = req.headers.userid?? '';
-  const mockList = ['624d8c01f3bad8bc9895a334', '624d97a8f3bad8bc9895a70d', '62590e96f3bad8bc98984e95', '624d981cf3bad8bc9895a739', '62594a71f3bad8bc98987326']
+  // const mockList = ['624d8c01f3bad8bc9895a334', '624d97a8f3bad8bc9895a70d', '62590e96f3bad8bc98984e95', '624d981cf3bad8bc9895a739', '62594a71f3bad8bc98987326']
   try {
-    const promises = mockList.map(item=>{
+    const promises = musicIds.map(item=>{
       return getMusicById(item, userID)
     })
     const result = await Promise.all(promises)
     res.send({
       code: 200,
       data: result
+      // musicIds
     })
   }
   catch(e){
@@ -991,7 +1051,15 @@ router.get('/AllDialogUnreadMsg', async (req, res)=>{
       unReadlist
     }
   })
-  const dialogsInfo = await Promise.all(promises)
+  const dialogsInfoRaw = await Promise.all(promises)
+  // 去掉空消息
+  const dialogsInfo = []
+  dialogsInfoRaw.forEach(item=>{
+    if(item.unReadlist.length !== 0){
+      dialogsInfo.push(item)
+    }
+  })
+
   res.send(dialogsInfo)
 })
 

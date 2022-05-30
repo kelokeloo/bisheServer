@@ -224,12 +224,23 @@ function getMusicById(musicId, userId){
       try {
         const db = client.db(dbName)
         // 更新
-        db.collection('music').findOne({_id: ObjectId(musicId)}, (err, result)=>{
-          if(err){reject(err)} // 查找错误
-          else {
-            resolve(result)
-          }
-        })
+        if(musicId.length > 1){
+          db.collection('music').findOne({_id: ObjectId(musicId)}, (err, result)=>{
+            if(err){reject(err)} // 查找错误
+            else {
+              resolve(result)
+            }
+          })
+        }
+        else {
+          db.collection('music').findOne({id: musicId}, (err, result)=>{
+            if(err){reject(err)} // 查找错误
+            else {
+              resolve(result)
+            }
+          })
+        }
+        
       }
       catch(e){
         reject(e)
@@ -244,6 +255,7 @@ function getMusicById(musicId, userId){
         try {
           const db = client.db(dbName)
           // 更新
+          console.log('userId', userId)
           db.collection('user').findOne({_id: ObjectId(userId)}, (err, result)=>{
             if(err){reject(err)} // 查找错误
             else {
@@ -268,6 +280,42 @@ function getMusicById(musicId, userId){
     
   })
 }
+/**
+ * 设置音乐信息
+ */
+
+function updateMusicInfo(musicId, document){
+  console.log('musicId', musicId)
+  return new Promise((resolve, reject)=>{
+    client.connect(async(err)=>{
+      if(err){reject(err)}
+      // 获取原来的数据
+      const db = client.db(dbName)
+        // 更新
+      if(musicId.length > 1){
+        db.collection('music').updateOne({_id: ObjectId(musicId)}, {$set: document }, (err, result)=>{
+          if(err){
+            console.log(err)
+            reject(err)
+          }
+          resolve(result)
+        })
+      }
+      else {
+        db.collection('music').updateOne({id: musicId}, {$set: document }, (err, result)=>{
+          if(err){
+            console.log(err)
+            reject(err)
+          }
+          resolve(result)
+        })
+      }
+      
+    })
+  })
+}
+
+
 
 /**
  * 设置用户喜欢的音乐
@@ -282,7 +330,7 @@ function setUserLikeMusic(userId, musicId, state){
     switch (state) {
       case true: 
         if(index === -1){
-          likeMusics.push(musicId)
+          likeMusics.unshift(musicId)
         }
         break;
       case false:
@@ -431,6 +479,29 @@ async function dispatchDialogByUserId(dialogInfo, userId){
 }
 
 
+/**
+ * 获取所有音乐
+ */
+function getAllMusics(){
+  return new Promise((resolve, reject)=>{
+    client.connect((err)=>{
+      if(err){reject(err)}
+      // 获取原来的数据
+      try {
+        const db = client.db(dbName)
+        // 更新
+        const result = db.collection('music').find({}).toArray()
+        resolve(result)
+      }
+      catch(e){
+        reject(e)
+      }
+    })
+  })
+}
+
+
+
 module.exports = {
   client,
   dbName,
@@ -438,6 +509,7 @@ module.exports = {
   addMessageToDialog,
   getUserInfo,
   getMusicById,
+  getAllMusics,
   getAllUserInfo,
   addOneUser,
   addOneAlbum,
@@ -447,7 +519,8 @@ module.exports = {
   getUserDialogsInfo,
   dispatchDialogByUserId,
   setAllMsgInDialog,
-  getTwoUsersDialogsId
+  getTwoUsersDialogsId,
+  updateMusicInfo
 }
 
 
